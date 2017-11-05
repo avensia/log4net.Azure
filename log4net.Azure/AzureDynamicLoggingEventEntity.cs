@@ -12,7 +12,7 @@ namespace log4net.Appender
             this["Identity"] = e.Identity;
             this["Level"] = e.Level.ToString();
             this["LoggerName"] = e.LoggerName;
-            this["Message"] = e.RenderedMessage + Environment.NewLine + e.GetExceptionString();
+            this["Message"] = e.RenderedMessage;
             this["EventTimeStamp"] = e.TimeStamp.ToUniversalTime();
             this["ThreadName"] = e.ThreadName;
             this["UserName"] = e.UserName;
@@ -20,7 +20,7 @@ namespace log4net.Appender
 
             if (e.ExceptionObject != null)
             {
-                this["Exception"] = e.ExceptionObject.ToString();
+                this["Exception"] = e.GetExceptionString();
             }
             
             foreach (DictionaryEntry entry in e.Properties)
