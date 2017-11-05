@@ -4,8 +4,10 @@ using log4net.Core;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace log4net.Appender
 {
@@ -15,6 +17,10 @@ namespace log4net.Appender
         private CloudTableClient _client;
         private CloudTable _table;
         private DateTime _tableDate;
+        private Thread _asyncLoggingThread;
+        private List<LoggingEvent> _asyncQueue;
+        private AutoResetEvent _asyncItemAvailable;
+        private CancellationTokenSource _shutdownTokenSource;
 
         public string ConnectionStringName { get; set; }
 
@@ -57,6 +63,7 @@ namespace log4net.Appender
 
         public bool PropAsColumn { get; set; }
         public bool UseRollingTable { get; set; }
+        public int AsyncIntervalMilliseconds { get; set; }
 
 	    private PartitionKeyTypeEnum _partitionKeyType = PartitionKeyTypeEnum.LoggerName;
         public PartitionKeyTypeEnum PartitionKeyType
@@ -97,10 +104,10 @@ namespace log4net.Appender
             _table.ExecuteBatch(batchOperation);
         }
 
-        protected override void SendBuffer(LoggingEvent[] events)
+        private void SendEvents(IEnumerable<LoggingEvent> events)
         {
             var currentBatch = new List<LoggingEvent>();
-            foreach (var evt in events)
+            foreach (var evt in events.OrderBy(e => e.TimeStamp))
             {
                 var timestampUtc = evt.TimeStamp.ToUniversalTime();
                 if (UseRollingTable && timestampUtc.Date != _tableDate)
@@ -127,6 +134,22 @@ namespace log4net.Appender
             }
         }
 
+        protected override void SendBuffer(LoggingEvent[] events)
+        {
+            if (_asyncQueue != null)
+            {
+                lock (_asyncQueue)
+                {
+                    _asyncQueue.AddRange(events);
+                }
+                _asyncItemAvailable.Set();
+            }
+            else
+            {
+                SendEvents(events);
+            }
+        }
+
         private ITableEntity GetLogEntity(LoggingEvent @event)
         {
             if (Layout != null)
@@ -146,6 +169,74 @@ namespace log4net.Appender
             _account = CloudStorageAccount.Parse(ConnectionString);
             _client = _account.CreateCloudTableClient();
             UpdateTableReference(DateTime.UtcNow);
+
+            if (AsyncIntervalMilliseconds > 0)
+            {
+                BufferSize = 1;
+                _asyncLoggingThread = new Thread(AsyncLogger);
+                _asyncQueue = new List<LoggingEvent>();
+                _asyncItemAvailable = new AutoResetEvent(false);
+                _shutdownTokenSource = new CancellationTokenSource();
+
+                Thread.MemoryBarrier();
+                _asyncLoggingThread.Start();
+            }
+        }
+
+        protected override void OnClose()
+        {
+            if (_asyncLoggingThread != null)
+            {
+                _shutdownTokenSource.Cancel();
+                _asyncLoggingThread.Join();
+
+                _asyncLoggingThread = null;
+                _asyncQueue = null;
+
+                _asyncItemAvailable.Dispose();
+                _asyncItemAvailable = null;
+
+                _shutdownTokenSource.Dispose();
+                _shutdownTokenSource = null;
+            }
+        }
+
+        private void AsyncLogger()
+        {
+            var handles = new [] { _asyncItemAvailable, _shutdownTokenSource.Token.WaitHandle };
+            for (;;)
+            {
+                WaitHandle.WaitAny(handles);
+                List<LoggingEvent> events;
+                lock (_asyncQueue)
+                {
+                    events = _asyncQueue.ToList();
+                }
+
+                if (events.Count > 0)
+                {
+                    try
+                    {
+                        SendEvents(events);
+
+                        lock (_asyncQueue)
+                        {
+                            _asyncQueue.RemoveRange(0, events.Count);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Not really anything we can do about this.
+                    }
+                }
+
+                if (_shutdownTokenSource.Token.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                _shutdownTokenSource.Token.WaitHandle.WaitOne(AsyncIntervalMilliseconds);
+            }
         }
     }
 }
