@@ -13,7 +13,7 @@ namespace log4net.Appender
             Level = e.Level.ToString();
             Message = e.RenderedMessage + Environment.NewLine + e.GetExceptionString();
             ThreadName = e.ThreadName;
-            EventTimeStamp = e.TimeStamp;
+            EventTimeStamp = e.TimeStamp.ToUniversalTime();
             using (var w = new StringWriter())
             {
                 layout.Format(w, e);

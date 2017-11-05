@@ -9,7 +9,7 @@ namespace log4net.Appender
         {
             return string.Format(
                 "{0:D19}.{1}",
-                 DateTime.MaxValue.Ticks - loggingEvent.TimeStamp.Ticks,
+                 DateTime.MaxValue.Ticks - loggingEvent.TimeStamp.ToUniversalTime().Ticks,
                 Guid.NewGuid().ToString().ToLower());
         }
 
@@ -22,9 +22,8 @@ namespace log4net.Appender
                 case PartitionKeyTypeEnum.DateReverse:
                     // substract from DateMaxValue the Tick Count of the current hour
                     // so a Table Storage Partition spans an hour
-                    return string.Format("{0:D19}",
-                        (DateTime.MaxValue.Ticks -
-                         loggingEvent.TimeStamp.Date.AddHours(loggingEvent.TimeStamp.Hour).Ticks + 1));
+                    var timestamp = loggingEvent.TimeStamp.ToUniversalTime();
+                    return $"{(DateTime.MaxValue.Ticks - timestamp.Date.AddHours(timestamp.Hour).Ticks + 1):D19}";
                 default:
 		            // ReSharper disable once NotResolvedInText
                     throw new ArgumentOutOfRangeException("PartitionKeyType", partitionKeyType, null);

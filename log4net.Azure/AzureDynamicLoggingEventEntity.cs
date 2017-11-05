@@ -13,7 +13,7 @@ namespace log4net.Appender
             this["Level"] = e.Level.ToString();
             this["LoggerName"] = e.LoggerName;
             this["Message"] = e.RenderedMessage + Environment.NewLine + e.GetExceptionString();
-            this["EventTimeStamp"] = e.TimeStamp;
+            this["EventTimeStamp"] = e.TimeStamp.ToUniversalTime();
             this["ThreadName"] = e.ThreadName;
             this["UserName"] = e.UserName;
             this["Location"] = e.LocationInformation.FullInfo;
@@ -32,7 +32,7 @@ namespace log4net.Appender
                 this[key] = entry.Value;
             }
 
-            Timestamp = e.TimeStamp;
+            Timestamp = e.TimeStamp.ToUniversalTime();
             PartitionKey = e.MakePartitionKey(partitionKeyType);
             RowKey = e.MakeRowKey();
         }

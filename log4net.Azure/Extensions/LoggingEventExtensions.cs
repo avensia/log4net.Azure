@@ -25,7 +25,7 @@ namespace log4net.Appender.Extensions
                 "LogEntry",
                 new XElement("UserName", loggingEvent.UserName),
                 new XElement("TimeStamp",
-                    loggingEvent.TimeStamp.ToString(CultureInfo.InvariantCulture)),
+                    loggingEvent.TimeStamp.ToUniversalTime().ToString(CultureInfo.InvariantCulture)),
                 new XElement("ThreadName", loggingEvent.ThreadName),
                 new XElement("LoggerName", loggingEvent.LoggerName),
                 new XElement("Level", loggingEvent.Level),
