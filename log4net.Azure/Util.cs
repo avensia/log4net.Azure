@@ -26,13 +26,6 @@ namespace log4net.Appender
                 return config.ConnectionString;
             }
 
-            // Fallback to CloudConfigurationManager in case we're running as a worker/web role
-            var azConfig = CloudConfigurationManager.GetSetting(connectionStringName);
-            if (!string.IsNullOrWhiteSpace(azConfig))
-            {
-                return azConfig;
-            }
-
             // Connection string not found, throw exception to notify the user
             throw new ApplicationException(Resources.AzureConnectionStringNotSpecified);
         }
