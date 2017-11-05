@@ -4,6 +4,7 @@ using log4net.Core;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace log4net.Appender
@@ -13,6 +14,7 @@ namespace log4net.Appender
         private CloudStorageAccount _account;
         private CloudTableClient _client;
         private CloudTable _table;
+        private DateTime _tableDate;
 
         public string ConnectionStringName { get; set; }
 
@@ -54,6 +56,7 @@ namespace log4net.Appender
         }
 
         public bool PropAsColumn { get; set; }
+        public bool UseRollingTable { get; set; }
 
 	    private PartitionKeyTypeEnum _partitionKeyType = PartitionKeyTypeEnum.LoggerName;
         public PartitionKeyTypeEnum PartitionKeyType
@@ -62,21 +65,65 @@ namespace log4net.Appender
             set { _partitionKeyType = value; }
         }
 
+        private void UpdateTableReference(DateTime dateTimeUtc)
+        {
+            if (UseRollingTable)
+            {
+                var date = dateTimeUtc.Date;
+                if (date != _tableDate)
+                {
+                    _table = _client.GetTableReference(TableName + dateTimeUtc.ToString("yyyyMMdd"));
+                    _table.CreateIfNotExists();
+                    _tableDate = date;
+                }
+            }
+            else
+            {
+                if (_table == null)
+                {
+                    _table = _client.GetTableReference(TableName);
+                    _table.CreateIfNotExists();
+                }
+            }
+        }
+
+        private void SendBatch(IEnumerable<LoggingEvent> batch)
+        {
+            var batchOperation = new TableBatchOperation();
+            foreach (var azureLoggingEvent in batch.Select(GetLogEntity))
+            {
+                batchOperation.Insert(azureLoggingEvent);
+            }
+            _table.ExecuteBatch(batchOperation);
+        }
+
         protected override void SendBuffer(LoggingEvent[] events)
         {
-            var grouped = events.GroupBy(evt => evt.LoggerName);
-
-            foreach (var group in grouped)
+            var currentBatch = new List<LoggingEvent>();
+            foreach (var evt in events)
             {
-                foreach (var batch in group.Batch(100))
+                var timestampUtc = evt.TimeStamp.ToUniversalTime();
+                if (UseRollingTable && timestampUtc.Date != _tableDate)
                 {
-                    var batchOperation = new TableBatchOperation();
-                    foreach (var azureLoggingEvent in batch.Select(GetLogEntity))
+                    if (currentBatch.Count > 0)
                     {
-                        batchOperation.Insert(azureLoggingEvent);
+                        SendBatch(currentBatch);
+                        currentBatch.Clear();
                     }
-                    _table.ExecuteBatch(batchOperation);
+                    UpdateTableReference(timestampUtc);
                 }
+
+                currentBatch.Add(evt);
+                if (currentBatch.Count == 100)
+                {
+                    SendBatch(currentBatch);
+                    currentBatch.Clear();
+                }
+            }
+
+            if (currentBatch.Count > 0)
+            {
+                SendBatch(currentBatch);
             }
         }
 
@@ -98,8 +145,7 @@ namespace log4net.Appender
 
             _account = CloudStorageAccount.Parse(ConnectionString);
             _client = _account.CreateCloudTableClient();
-            _table = _client.GetTableReference(TableName);
-            _table.CreateIfNotExists();
+            UpdateTableReference(DateTime.UtcNow);
         }
     }
 }
