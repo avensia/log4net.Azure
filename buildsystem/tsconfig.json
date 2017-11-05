@@ -1,0 +1,39 @@
+{
+    "buildOnSave": false,
+    "compileOnSave": false,
+    "compilerOptions": {
+        "baseUrl": ".",
+        "noImplicitAny": true,
+        "target": "es6",
+        "module": "commonjs",
+        "noFallthroughCasesInSwitch": true,
+        "noEmit": false,
+        "moduleResolution": "node",
+        "allowJs": true
+    },
+    "include": [
+        "**/*.ts",
+        "../node_modules/@avensia/garn/**/*.ts",
+		"../node_modules/@types/node/*.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ],
+    "formatCodeOptions": {
+        "indentSize": 2,
+        "tabSize": 2,
+        "newLineCharacter": "\r\n",
+        "convertTabsToSpaces": true,
+        "insertSpaceAfterCommaDelimiter": true,
+        "insertSpaceAfterSemicolonInForStatements": true,
+        "insertSpaceBeforeAndAfterBinaryOperators": true,
+        "insertSpaceAfterKeywordsInControlFlowStatements": true,
+        "insertSpaceAfterFunctionKeywordForAnonymousFunctions": false,
+        "insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis": false,
+        "placeOpenBraceOnNewLineForFunctions": false,
+        "placeOpenBraceOnNewLineForControlBlocks": false
+    },
+    "atom": {
+        "rewriteTsconfig": false
+    }
+}

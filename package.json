@@ -1,0 +1,19 @@
+{
+  "name": "Avensia.Payments",
+  "license": "MIT",
+  "dependencies": {
+    "@avensia/garn": "^1.2.5",
+    "@types/glob": "^5.0.32",
+    "@types/jest": "^20.0.8",
+    "@types/node": "^8.0.26",
+    "@types/readline-sync": "^1.4.2",
+    "@types/request": "^2.0.3",
+    "@types/rimraf": "^2.0.2",
+    "@types/through": "^0.0.29",
+    "@types/xml-parser": "^1.2.29",
+    "npm": "4.6.1",
+    "ts-node": "^3.0.2",
+    "typescript": "^2.2.2"
+  },
+  "version": "0.0.0"
+}

@@ -164,3 +164,5 @@ pip-log.txt
 
 #NuGet exe
 .nuget/NuGet.exe
+node_modules/
+yarn-error.log
