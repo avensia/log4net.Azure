@@ -1,26 +1,35 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using log4net.Core;
 
 namespace log4net.Appender
 {
     internal sealed class AzureDynamicLoggingEventEntity : ElasticTableEntity
     {
-        public AzureDynamicLoggingEventEntity(LoggingEvent e, PartitionKeyTypeEnum partitionKeyType)
+        public AzureDynamicLoggingEventEntity(LoggingEvent e, PartitionKeyTypeEnum partitionKeyType, HashSet<string> columns)
         {
-            this["Domain"] = e.Domain;
-            this["Identity"] = e.Identity;
-            this["Level"] = e.Level.ToString();
-            this["LoggerName"] = e.LoggerName;
-            this["Message"] = e.RenderedMessage;
-            this["EventTimeStamp"] = e.TimeStamp.ToUniversalTime();
-            this["ThreadName"] = e.ThreadName;
-            this["UserName"] = e.UserName;
-            this["Location"] = e.LocationInformation.FullInfo;
+            void Add(string key, object value)
+            {
+                if (columns == null || columns.Contains(key))
+                {
+                    this[key] = value;
+                }
+            }
+
+            Add("Domain", e.Domain);
+            Add("Identity", e.Identity);
+            Add("Level", e.Level.ToString());
+            Add("LoggerName", e.LoggerName);
+            Add("Message", e.RenderedMessage);
+            Add("EventTimeStamp", e.TimeStamp.ToUniversalTime());
+            Add("ThreadName", e.ThreadName);
+            Add("UserName", e.UserName);
+            Add("Location", e.LocationInformation.FullInfo);
 
             if (e.ExceptionObject != null)
             {
-                this["Exception"] = e.GetExceptionString();
+                Add("Exception", e.GetExceptionString());
             }
             
             foreach (DictionaryEntry entry in e.Properties)
@@ -29,7 +38,8 @@ namespace log4net.Appender
                     .Replace(":", "_")
                     .Replace("@", "_")
                     .Replace(".", "_");
-                this[key] = entry.Value;
+
+                Add(key, entry.Value);
             }
 
             Timestamp = e.TimeStamp.ToUniversalTime();

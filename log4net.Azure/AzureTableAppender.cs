@@ -21,6 +21,7 @@ namespace log4net.Appender
         private List<LoggingEvent> _asyncQueue;
         private AutoResetEvent _asyncItemAvailable;
         private CancellationTokenSource _shutdownTokenSource;
+        private HashSet<string> _columns;
 
         public string ConnectionStringName { get; set; }
 
@@ -70,6 +71,25 @@ namespace log4net.Appender
         {
             get { return _partitionKeyType; }
             set { _partitionKeyType = value; }
+        }
+
+        public string Columns
+        {
+            get
+            {
+                return _columns != null ? string.Join(",", _columns) : "";
+            }
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _columns = null;
+                }
+                else
+                {
+                    _columns = new HashSet<string>(value.Split(',').Select(v => v.Trim()));
+                }
+            }
         }
 
         private void UpdateTableReference(DateTime dateTimeUtc)
@@ -158,7 +178,7 @@ namespace log4net.Appender
             }
 
             return PropAsColumn
-                ? (ITableEntity)new AzureDynamicLoggingEventEntity(@event, PartitionKeyType)
+                ? (ITableEntity)new AzureDynamicLoggingEventEntity(@event, PartitionKeyType, _columns)
                 : new AzureLoggingEventEntity(@event, PartitionKeyType);
         }
 
