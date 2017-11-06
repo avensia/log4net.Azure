@@ -39,7 +39,14 @@ namespace log4net.Appender
                     .Replace("@", "_")
                     .Replace(".", "_");
 
-                Add(key, entry.Value);
+                var value = entry.Value;
+
+                if (value != null && !(value is byte[]) && !(value is bool) && !(value is DateTimeOffset)  && !(value is DateTime)  && !(value is double) && !(value is Guid)  && !(value is int)  && !(value is long)  && !(value is string))
+                {
+                    value = e.Repository?.RendererMap.FindAndRender(value) ?? value.ToString();
+                }
+
+                Add(key, value);
             }
 
             Timestamp = e.TimeStamp.ToUniversalTime();
