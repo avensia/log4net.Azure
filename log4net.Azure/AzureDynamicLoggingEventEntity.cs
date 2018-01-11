@@ -53,5 +53,15 @@ namespace log4net.Appender
             PartitionKey = e.MakePartitionKey(partitionKeyType);
             RowKey = e.MakeRowKey();
         }
+
+        public override string ToString()
+        {
+            var result = $"{Timestamp:yyyy-MM-dd HHmmss,fff} {Properties["LoggerName"].PropertyAsObject} {Properties["Level"].PropertyAsObject} {Properties["Message"].PropertyAsObject}";
+            if (Properties.ContainsKey("Exception"))
+            {
+                result += Environment.NewLine + Properties["Exception"].PropertyAsObject;
+            }
+            return result;
+        }
     }
 }

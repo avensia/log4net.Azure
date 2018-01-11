@@ -6,8 +6,10 @@ using Microsoft.WindowsAzure.Storage.Table;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
+using log4net.Util;
 
 namespace log4net.Appender
 {
@@ -65,8 +67,9 @@ namespace log4net.Appender
         public bool PropAsColumn { get; set; }
         public bool UseRollingTable { get; set; }
         public int AsyncIntervalMilliseconds { get; set; }
+        public string LogLogFile { get; set; }
 
-	    private PartitionKeyTypeEnum _partitionKeyType = PartitionKeyTypeEnum.LoggerName;
+        private PartitionKeyTypeEnum _partitionKeyType = PartitionKeyTypeEnum.LoggerName;
         public PartitionKeyTypeEnum PartitionKeyType
         {
             get { return _partitionKeyType; }
@@ -227,6 +230,19 @@ namespace log4net.Appender
             {
                 WaitHandle.WaitAny(handles);
                 List<ITableEntity> events;
+
+                if (!string.IsNullOrEmpty(LogLogFile))
+                {
+                    try
+                    {
+                        File.SetLastWriteTimeUtc(LogLogFile, DateTime.UtcNow);
+                    }
+                    catch (Exception)
+                    {
+                        // Not much to do
+                    }
+                }
+
                 lock (_asyncQueue)
                 {
                     events = _asyncQueue.ToList();
@@ -243,9 +259,23 @@ namespace log4net.Appender
                             _asyncQueue.RemoveRange(0, events.Count);
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Not really anything we can do about this.
+                        if (!string.IsNullOrEmpty(LogLogFile))
+                        {
+                            try
+                            {
+                                File.AppendAllLines(LogLogFile, events.Select(e => e.ToString()).Concat(new[] { "Logging Exception: " + ex }));
+                                lock (_asyncQueue)
+                                {
+                                    _asyncQueue.RemoveRange(0, events.Count);
+                                }
+                            }
+                            catch
+                            {
+                                LogLog.Error(typeof(AzureTableAppender), "Error logging to table storage", ex);
+                            }
+                        }
                     }
                 }
 

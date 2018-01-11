@@ -69,5 +69,10 @@ namespace log4net.Appender
         public string MethodName { get; set; }
 
         public StackFrameItem[] StackFrames { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Timestamp:s} {Level} {Message}";
+        }
     }
 }

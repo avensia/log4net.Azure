@@ -14,6 +14,7 @@ namespace log4net.Appender
             Message = e.RenderedMessage + Environment.NewLine + e.GetExceptionString();
             ThreadName = e.ThreadName;
             EventTimeStamp = e.TimeStamp.ToUniversalTime();
+            Timestamp = e.TimeStamp.ToUniversalTime();
             using (var w = new StringWriter())
             {
                 layout.Format(w, e);
@@ -31,5 +32,10 @@ namespace log4net.Appender
         public string Level { get; set; }
 
         public string Message { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Timestamp:s} {Level} {Message}";
+        }
     }
 }
