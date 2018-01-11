@@ -18,7 +18,7 @@ namespace log4net.Appender
         private CloudTable _table;
         private DateTime _tableDate;
         private Thread _asyncLoggingThread;
-        private List<LoggingEvent> _asyncQueue;
+        private List<ITableEntity> _asyncQueue;
         private AutoResetEvent _asyncItemAvailable;
         private CancellationTokenSource _shutdownTokenSource;
         private HashSet<string> _columns;
@@ -92,7 +92,7 @@ namespace log4net.Appender
             }
         }
 
-        private void UpdateTableReference(DateTime dateTimeUtc)
+        private void UpdateTableReference(DateTimeOffset dateTimeUtc)
         {
             if (UseRollingTable)
             {
@@ -114,30 +114,29 @@ namespace log4net.Appender
             }
         }
 
-        private void SendBatch(IEnumerable<LoggingEvent> batch)
+        private void SendBatch(IEnumerable<ITableEntity> batch)
         {
             var batchOperation = new TableBatchOperation();
-            foreach (var azureLoggingEvent in batch.Select(GetLogEntity))
+            foreach (var azureLoggingEvent in batch)
             {
                 batchOperation.Insert(azureLoggingEvent);
             }
             _table.ExecuteBatch(batchOperation);
         }
 
-        private void SendEvents(IEnumerable<LoggingEvent> events)
+        private void SendEvents(IEnumerable<ITableEntity> events)
         {
-            var currentBatch = new List<LoggingEvent>();
-            foreach (var evt in events.OrderBy(e => e.TimeStamp))
+            var currentBatch = new List<ITableEntity>();
+            foreach (var evt in events.OrderBy(e => e.Timestamp))
             {
-                var timestampUtc = evt.TimeStamp.ToUniversalTime();
-                if (UseRollingTable && timestampUtc.Date != _tableDate)
+                if (UseRollingTable && evt.Timestamp.Date != _tableDate)
                 {
                     if (currentBatch.Count > 0)
                     {
                         SendBatch(currentBatch);
                         currentBatch.Clear();
                     }
-                    UpdateTableReference(timestampUtc);
+                    UpdateTableReference(evt.Timestamp);
                 }
 
                 currentBatch.Add(evt);
@@ -160,13 +159,13 @@ namespace log4net.Appender
             {
                 lock (_asyncQueue)
                 {
-                    _asyncQueue.AddRange(events);
+                    _asyncQueue.AddRange(events.Select(GetLogEntity));
                 }
                 _asyncItemAvailable.Set();
             }
             else
             {
-                SendEvents(events);
+                SendEvents(events.Select(GetLogEntity));
             }
         }
 
@@ -194,7 +193,7 @@ namespace log4net.Appender
             {
                 BufferSize = 1;
                 _asyncLoggingThread = new Thread(AsyncLogger);
-                _asyncQueue = new List<LoggingEvent>();
+                _asyncQueue = new List<ITableEntity>();
                 _asyncItemAvailable = new AutoResetEvent(false);
                 _shutdownTokenSource = new CancellationTokenSource();
 
@@ -227,7 +226,7 @@ namespace log4net.Appender
             for (;;)
             {
                 WaitHandle.WaitAny(handles);
-                List<LoggingEvent> events;
+                List<ITableEntity> events;
                 lock (_asyncQueue)
                 {
                     events = _asyncQueue.ToList();
