@@ -13,7 +13,7 @@ namespace log4net.Appender
             {
                 if (columns == null || columns.Contains(key))
                 {
-                    this[key] = value;
+                    this[key.Replace(":", "_").Replace("@", "_").Replace(".", "_")] = value;
                 }
             }
 
@@ -34,11 +34,6 @@ namespace log4net.Appender
             
             foreach (DictionaryEntry entry in e.Properties)
             {
-                var key = entry.Key.ToString()
-                    .Replace(":", "_")
-                    .Replace("@", "_")
-                    .Replace(".", "_");
-
                 var value = entry.Value;
 
                 if (value != null && !(value is byte[]) && !(value is bool) && !(value is DateTimeOffset)  && !(value is DateTime)  && !(value is double) && !(value is Guid)  && !(value is int)  && !(value is long)  && !(value is string))
@@ -46,7 +41,7 @@ namespace log4net.Appender
                     value = e.Repository?.RendererMap.FindAndRender(value) ?? value.ToString();
                 }
 
-                Add(key, value);
+                Add(entry.Key.ToString(), value);
             }
 
             Timestamp = e.TimeStamp.ToUniversalTime();
