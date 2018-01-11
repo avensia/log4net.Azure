@@ -237,19 +237,7 @@ namespace log4net.Appender
             {
                 WaitHandle.WaitAny(handles);
                 List<ITableEntity> events;
-
-                if (!string.IsNullOrEmpty(LogLogFile))
-                {
-                    try
-                    {
-                        File.SetLastWriteTimeUtc(LogLogFile, DateTime.UtcNow);
-                    }
-                    catch (Exception)
-                    {
-                        // Not much to do
-                    }
-                }
-
+                
                 lock (_asyncQueue)
                 {
                     events = _asyncQueue.ToList();
