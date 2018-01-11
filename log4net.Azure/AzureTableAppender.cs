@@ -130,17 +130,24 @@ namespace log4net.Appender
         private void SendEvents(IEnumerable<ITableEntity> events)
         {
             var currentBatch = new List<ITableEntity>();
+            string partitionKey = null;
             foreach (var evt in events.OrderBy(e => e.Timestamp))
             {
-                if (UseRollingTable && evt.Timestamp.Date != _tableDate)
+                bool newTable = UseRollingTable && evt.Timestamp.Date != _tableDate;
+                bool newPartition = partitionKey != null && evt.PartitionKey != partitionKey;
+                if (newTable || newPartition)
                 {
                     if (currentBatch.Count > 0)
                     {
                         SendBatch(currentBatch);
                         currentBatch.Clear();
                     }
-                    UpdateTableReference(evt.Timestamp);
+                    if (newTable)
+                    {
+                        UpdateTableReference(evt.Timestamp);
+                    }
                 }
+                partitionKey = evt.PartitionKey;
 
                 currentBatch.Add(evt);
                 if (currentBatch.Count == 100)
