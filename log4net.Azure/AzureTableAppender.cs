@@ -240,6 +240,18 @@ namespace log4net.Appender
                 
                 lock (_asyncQueue)
                 {
+                    if (_asyncQueue.Count > 1000)
+                    {
+                        _asyncQueue.Clear();
+                        _asyncQueue.Add(GetLogEntity(new LoggingEvent(new LoggingEventData
+                        {
+                            LoggerName = typeof(AzureTableAppender).FullName,
+                            Message = "Too many log entries at the same time",
+                            Level = Level.Fatal,
+                            TimeStamp = DateTime.UtcNow,
+                        })));
+                    }
+
                     events = _asyncQueue.ToList();
                 }
 
