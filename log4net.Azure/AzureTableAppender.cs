@@ -103,7 +103,7 @@ namespace log4net.Appender
                 if (date != _tableDate)
                 {
                     _table = _client.GetTableReference(TableName + dateTimeUtc.ToString("yyyyMMdd"));
-                    _table.CreateIfNotExists();
+                    CreateIfNotExists(_table);
                     _tableDate = date;
                 }
             }
@@ -112,7 +112,31 @@ namespace log4net.Appender
                 if (_table == null)
                 {
                     _table = _client.GetTableReference(TableName);
-                    _table.CreateIfNotExists();
+                    CreateIfNotExists(_table);
+                }
+            }
+        }
+
+        private void CreateIfNotExists(CloudTable table)
+        {
+            try
+            {
+                table.CreateIfNotExists();
+            }
+            catch (StorageException e)
+            {
+                if (e.RequestInformation != null && e.RequestInformation.HttpStatusCode == 409)
+                {
+                    // There seems to be a bug where a call to CreateIfNotExists() can throw a
+                    // 409 Conflict if the table already exists.
+                    // See: https://stackoverflow.com/questions/48893519/azure-table-storage-exception-409-conflict-unexpected
+
+                    if (!table.Exists())
+                        throw;
+                }
+                else
+                {
+                    throw;
                 }
             }
         }
