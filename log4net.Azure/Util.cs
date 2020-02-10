@@ -1,5 +1,5 @@
 ﻿using log4net.Appender.Language;
-using Microsoft.Azure;
+using Microsoft.WindowsAzure;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
