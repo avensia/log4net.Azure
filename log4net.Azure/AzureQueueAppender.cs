@@ -1,7 +1,7 @@
 ﻿using log4net.Appender.Language;
 using log4net.Core;
 using log4net.Layout;
-using Microsoft.Azure;
+using Microsoft.WindowsAzure;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Queue;
 using System;

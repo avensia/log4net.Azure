@@ -7,7 +7,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using log4net.Appender.Language;
 using log4net.Core;
-using Microsoft.Azure;
+using Microsoft.WindowsAzure;
 
 namespace log4net.Appender
 {
